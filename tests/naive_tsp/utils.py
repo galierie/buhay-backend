@@ -17,17 +17,18 @@ def naive_create_graph(points: List[Point]) -> Graph:
     # Add points[i] as the ith node of the graph
     for i in range(n):
         G.add_node(
-            i, 
-            lat = points[i].coordinates[0], 
-            lng = points[i].coordinates[1]
+            i,
+            lat = points[i]["coordinates"][0], 
+            lng = points[i]["coordinates"][1]
         )
     
     # Add edge (i, j) for each possible i, j combination such that its weight 
     # is the haversine distance between Point i and Point j
     for i in range(n):
-        lat_i, lng_i = points[i].coordinates
+        lat_i, lng_i = points[i]["coordinates"]
         for j in range(i+1, n):
-            lat_j, lng_j = points[j].coordinates
+            lat_j, lng_j = points[j]["coordinates"]
+
             haversine_distance = great_circle(lat_i, lng_i, lat_j, lng_j)
             
             G.add_edge(
@@ -38,7 +39,8 @@ def naive_create_graph(points: List[Point]) -> Graph:
     return G
 
 
-def h_paths(G: Graph, start: Node, visited: dict[int, bool], distance_to_start: float = 0) -> List[Path]:
+def h_paths(G: Graph, s: Node, start: Node, visited: dict[int, bool], distance_to_start: float = 0) -> List[Path]:
+
     """
     Get all single-source hamiltonian paths _naively_ using dynamic programming.
     Hopefully this is reasonably slow lang.
@@ -47,7 +49,7 @@ def h_paths(G: Graph, start: Node, visited: dict[int, bool], distance_to_start: 
 
     if all(visited.values()):
         visited[start.i] = False
-        return [(distance_to_start, [start])]
+        return [(distance_to_start + great_circle(start.lat, start.lng, s.lat, s.lng), [start, s])]
 
     paths: List[Path] = []
 
@@ -60,7 +62,7 @@ def h_paths(G: Graph, start: Node, visited: dict[int, bool], distance_to_start: 
 
     # Add starting node to paths from its adjacent nodes.
     for edge in connected_edges:
-        adj = h_paths(G, G.get_node(edge.j), visited, distance_to_start + edge.weight)
+        adj = h_paths(G, s, G.get_node(edge.j), visited, distance_to_start + edge.weight)
         for distance_to_adj, adj_path in adj:
             paths += [(distance_to_adj, [start] + adj_path)]
 
@@ -72,7 +74,7 @@ def h_paths(G: Graph, start: Node, visited: dict[int, bool], distance_to_start: 
 def min_hamiltonian_paths(G: Graph) -> List[Path]:
     # Get all minimum hamiltonian paths given a starting node.
     start_node = G.nodes[0] # Added the starting point kanina as the first node in the graph.
-    all_paths: List[Path] = h_paths(G, start_node, {n.i: False for n in G.nodes})
+    all_paths: List[Path] = h_paths(G, start_node, start_node, {n.i: False for n in G.nodes})
 
     # Get the shortest distance among all paths.
     shortest_distance = min(all_paths, key=lambda p : p[0])[0]

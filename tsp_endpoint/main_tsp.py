@@ -12,19 +12,24 @@ router = APIRouter()
 async def tsp(points: TSPinput) -> List[Point]:
     try:
         # Convert input points into a complete, weighted, directed graph, in which the weights of the edges are the haversine distance between the adjacent vertices.
-        G: nx.Graph = create_graph(points.other_points)
+        G: nx.Graph = create_graph([points.start] + points.other_points)
 
         # Search for the shortest acyclic hamiltonian path connecting all other_points.
         tsp_route = nx.approximation.traveling_salesman_problem(
             G = G,
             nodes = list(G.nodes),
             weight = "weight",
-            cycle = False,
+            cycle = True,
+            method = nx.approximation.simulated_annealing_tsp,
+            init_cycle = nx.approximation.greedy_tsp(G, "weight")
         )
+        while tsp_route[0] != 0:
+            front = tsp_route.pop(0)
+            tsp_route.append(front)
         tsp_route = node_to_json_parser(G, tsp_route)
         
         # Connect the starting node to the closest end of the shortest hamiltonian path.
-        tsp_route = append_starting_node(tsp_route, points.start)
+        #tsp_route = append_starting_node(tsp_route, points.start)
 
         return tsp_route
     
